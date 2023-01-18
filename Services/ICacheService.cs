@@ -1,14 +1,14 @@
 ﻿namespace DistributedCache.Services
 {
     public interface ICacheService
-    {
+    { 
         /// <summary>
-        /// Get Data using key
+        /// Get Data list using key
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="key"></param>
         /// <returns></returns>
-        T GetData<T>(string key);
+        IList<T> GetData<T>(string key);
 
         /// <summary>
         /// Set Data with Value and Expiration Time of Key

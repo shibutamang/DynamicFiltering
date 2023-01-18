@@ -7,15 +7,15 @@ namespace DistributedCache.Services
     public class CacheService : ICacheService
     { 
         private IDistributedCache _distributedCache;
-        private IConfiguration _config;
+        private IConfiguration _config; 
         static ConnectionMultiplexer redis;
         public CacheService(IDistributedCache distributedCache, IConfiguration config)
         {
             _distributedCache = distributedCache;
-            _config = config;
+            _config = config; 
         } 
 
-        public T GetData<T>(string key)
+        public IList<T> GetData<T>(string key)
         {
             var value = _distributedCache.GetString(key);
 
@@ -23,10 +23,12 @@ namespace DistributedCache.Services
 
             if (!string.IsNullOrEmpty(value))
             {
-                return JsonConvert.DeserializeObject<T>(value);
+                return JsonConvert.DeserializeObject<IList<T>>(value);
             }
-            return default;
-        }
+
+            return new List<T>();
+        } 
+
         public async Task SetData<T>(string key, T value, DateTimeOffset expirationTime)
         {
             TimeSpan expiryTime = expirationTime.DateTime.Subtract(DateTime.Now);

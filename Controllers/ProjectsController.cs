@@ -1,10 +1,14 @@
 ﻿using DistributedCache.Data;
 using DistributedCache.Extensions;
+using DistributedCache.Helpers;
+using DistributedCache.Helpers.Attributes;
 using DistributedCache.Models;
 using DistributedCache.Models.Dto;
 using DistributedCache.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json; 
 using System.Linq.Expressions; 
 using System.Text; 
@@ -12,7 +16,7 @@ using System.Text;
 namespace DistributedCache.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
+    [ApiController] 
     public class ProjectsController : ControllerBase
     {
         private readonly ApplicationDbContext _dbContext;
@@ -30,68 +34,61 @@ namespace DistributedCache.Controllers
             _logger = logger;
         }
 
-        [HttpGet]
-        public async Task<IEnumerable<GetProjectDto>> Get([FromQuery] ProjectSearchParams _params)
-        {
-            var projectsCache = _cacheService.GetData<IEnumerable<GetProjectDto>>($"{CacheItem.PROJECTS}"); 
+        //[HttpGet]
+        //public async Task<IEnumerable<GetProjectDto>> Get([FromQuery] ProjectSearchParams _params)
+        //{
+        //    var projectsCache = _cacheService.GetData<IEnumerable<GetProjectDto>>($"{CacheItem.PROJECTS}"); 
 
-            if(projectsCache != null && projectsCache.Count() > 0)
-            {
-                _logger.LogInformation($"---- returning {projectsCache.Count()} projects from cache: ", projectsCache);
+        //    if(projectsCache != null && projectsCache.Count() > 0)
+        //    {
+        //        _logger.LogInformation($"---- returning {projectsCache.Count()} projects from cache: ", projectsCache);
 
-                return projectsCache;
-            }
+        //        return projectsCache;
+        //    }
 
-            projectsCache =  _dbContext.Projects
-                            .Where(d=> (string.IsNullOrEmpty(_params.SearchText) || d.Name.ToLower().Contains(_params.SearchText.ToLower()))
-                                    && (string.IsNullOrEmpty(_params.Country) || d.Country.ToLower().Contains(_params.Country.ToLower())))
-                            .Select(x => new GetProjectDto 
-                            { 
-                                Id = x.Id,
-                                Name = x.Name,
-                                Description = x.Description,
-                                Country = x.Country,
-                                RiskFactor = x.RiskFactor,
-                                StartDate = x.StartDate,
-                                EndDate = x.EndDate
-                            }).ToList();
+        //    projectsCache =  _dbContext.Projects
+        //                    .Where(d=> (string.IsNullOrEmpty(_params.SearchText) || d.Name.ToLower().Contains(_params.SearchText.ToLower()))
+        //                            && (string.IsNullOrEmpty(_params.Country) || d.Country.ToLower().Contains(_params.Country.ToLower())))
+        //                    .Select(x => new GetProjectDto 
+        //                    { 
+        //                        Id = x.Id,
+        //                        Name = x.Name,
+        //                        Description = x.Description,
+        //                        Country = x.Country,
+        //                        RiskFactor = x.RiskFactor,
+        //                        StartDate = x.StartDate,
+        //                        EndDate = x.EndDate
+        //                    }).ToList();
             
-            _logger.LogInformation($"---- returning {projectsCache.Count()} projects from databse: ", projectsCache);
+        //    _logger.LogInformation($"---- returning {projectsCache.Count()} projects from databse: ", projectsCache);
 
-            if(projectsCache.Count() > 0)
-            {
-                string _cachekey = string.IsNullOrEmpty(_params.Country) ? CacheItem.PROJECTS : $"{CacheItem.PROJECTS}_{_params.Country}";
+        //    if(projectsCache.Count() > 0)
+        //    {
+        //        string _cachekey = string.IsNullOrEmpty(_params.Country) ? CacheItem.PROJECTS : $"{CacheItem.PROJECTS}_{_params.Country}";
 
-                await _cacheService.SetData<IEnumerable<GetProjectDto>>($"{_cachekey}", projectsCache,
-                    DateTimeOffset.Now.AddMinutes(_configuration.GetValue<int>("Redis:ExpirationTimeInMinutes")));
+        //        await _cacheService.SetData<IEnumerable<GetProjectDto>>($"{_cachekey}", projectsCache,
+        //            DateTimeOffset.Now.AddMinutes(_configuration.GetValue<int>("Redis:ExpirationTimeInMinutes")));
 
-                _logger.LogInformation($"---- set {projectsCache.Count()} db results to cache ", projectsCache);
-            }
+        //        _logger.LogInformation($"---- set {projectsCache.Count()} db results to cache ", projectsCache);
+        //    }
              
-            return projectsCache;
-        }
+        //    return projectsCache;
+        //}
          
 
-        [HttpGet("withdynamicfilter")]
-        public async Task<IEnumerable<GetProjectDto>> GetByDynamicFilter([FromQuery] ProjectSearchParams _params)
-        {
-
-            if (string.IsNullOrEmpty(_params.Query))
-            {
-                throw new Exception("Query params is required.");
-            }
-
+        [HttpGet("withdynamicfilter")] 
+        public async Task<IEnumerable<GetProjectDto>> GetByDynamicFilter()
+        { 
             var e = new GetProjectDto();
+           
+            var projectsCache = _cacheService.GetData<GetProjectDto>($"{CacheItem.PROJECTS}").ToList();
+           
+            //var result = _dbContext.Projects.Select(d => new GetProjectDto { Name = d.Name, Description = d.Description, Country = d.Country, RiskFactor = d.RiskFactor }) //.Where(x => x.RiskFactor == 12);
+            //    .WithDynamicFilter<GetProjectDto>(_params.Filter);
 
-            var _expr = ExpressionParser.Parse<GetProjectDto>(ref e , _params.Query); 
+            //_logger.LogInformation($"---- returning {result.Count()} projects from cache: ", result);
 
-            var projectsCache = _cacheService.GetData<IEnumerable<GetProjectDto>>($"{CacheItem.PROJECTS}").AsQueryable();
-              
-            var result = projectsCache.Where(_expr);
-
-            _logger.LogInformation($"---- returning {result.Count()} projects from cache: ", result);
-
-            return result;
+            return projectsCache.ToList();
 
             //var projectsCache_db = _dbContext.Projects
             //                .Where(d => (string.IsNullOrEmpty(_params.SearchText) || d.Name.ToLower().Contains(_params.SearchText.ToLower())) 
@@ -145,7 +142,7 @@ namespace DistributedCache.Controllers
 
                 _logger.LogInformation("----- project created successfully.", _project);
 
-                var projectsCache = _cacheService.GetData<IEnumerable<GetProjectDto>>($"{CacheItem.PROJECTS}").ToList();
+                var projectsCache = _cacheService.GetData<GetProjectDto>($"{CacheItem.PROJECTS}").ToList();
 
                 projectsCache.AddRange(new List<GetProjectDto>
                 {
@@ -184,7 +181,7 @@ namespace DistributedCache.Controllers
             {
                 throw new ArgumentNullException("Id is require.");
             }
-
+             
             var entity = await _dbContext.Projects.FindAsync(updateDto.Id);
 
             if (entity == null)
@@ -204,7 +201,7 @@ namespace DistributedCache.Controllers
             _logger.LogInformation("----- project updated successfully.", entity);
 
             //update cache
-            var projectsCache = _cacheService.GetData<IEnumerable<GetProjectDto>>($"{CacheItem.PROJECTS}").ToList();
+            var projectsCache = _cacheService.GetData<GetProjectDto>($"{CacheItem.PROJECTS}").ToList();
             if(projectsCache.Any(d=>d.Id == entity.Id))
             {
                 foreach(var item in projectsCache.Where(x=>x.Id == entity.Id))

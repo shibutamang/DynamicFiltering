@@ -1,8 +1,14 @@
 ﻿namespace DistributedCache.Models.Dto
 {
-    public class ProjectSearchParams: QueryStringParams
+    public class ProjectSearchParams : QueryStringParams
     { 
-        public string? Query { get; set; }
-        public string? Country { get; set; }
+        public List<FilterObject> Filter { get; set; }
+    }
+
+    public class FilterObject
+    {
+        public string Property { get; set; }
+        public string Operator { get; set; }
+        public List<string> Values { get; set; }
     }
 }

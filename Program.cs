@@ -1,4 +1,5 @@
 using DistributedCache.Data;
+using DistributedCache.Extensions;
 using DistributedCache.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -18,14 +19,18 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = $"{builder.Configuration.GetValue<string>("Redis:Server")}:{builder.Configuration.GetValue<int>("Redis:Port")}";
-    options.InstanceName = "DistributedCache";
+    options.InstanceName = "DistributedCache.";
 });
+
+builder.Services.AddAuditLogs(option => option.UseSqlServer(""));
 
 builder.Services.AddScoped<ICacheService, CacheService>();
 
 builder.Services.AddHostedService<BackgroundWorker>();
 
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddCustomAuthorization(); 
 
 var app = builder.Build();
 
@@ -52,11 +57,13 @@ app.UseRouting();
 app.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-    options.RoutePrefix = string.Empty;
+    options.RoutePrefix = "swagger";
 
 });
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseAudit();
 
 app.MapControllerRoute(
     name: "default",

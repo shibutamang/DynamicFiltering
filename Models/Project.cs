@@ -1,7 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using DistributedCache.Helpers.Attributes;
+using System.ComponentModel.DataAnnotations;
 
 namespace DistributedCache.Models
 {
+    [Audit]
     public class Project
     {
         [Key]
